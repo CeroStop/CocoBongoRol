@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CocoBongo Show Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: auto;
+            min-height: 100vh;
+        }
+
+        .container {
+            padding: 10px;
+            min-width: 100vw;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .current-time {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .current-show-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+            font-size: 0.9em;
+            max-width: 200px;
+        }
+
+        .timeline {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        .timeline h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .timeline-container {
+            display: flex;
+            min-width: max-content;
+            position: relative;
+            height: 120px;
+            gap: 5px;
+        }
+
+        .show-block {
+            background: linear-gradient(45deg, #4ECDC4, #44A08D);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .show-block:hover {
+            transform: scale(1.05);
+        }
+
+        .show-block.current {
+            background: linear-gradient(45deg, #FFD700, #FFA726);
+            border-color: #FF6B6B;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+        }
+
+        .show-block.past {
+            background: linear-gradient(45deg, #9E9E9E, #757575);
+            opacity: 0.7;
+        }
+
+        .show-name {
+            font-weight: bold;
+            font-size: 0.85em;
+            margin-bottom: 3px;
+        }
+
+        .show-time {
+            font-size: 0.7em;
+            opacity: 0.9;
+            margin-bottom: 3px;
+        }
+
+        .show-duration {
+            font-size: 0.65em;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .clock-indicator {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            font-size: 1.1em;
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .control-group label {
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+            margin-bottom: 5px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .csv-input {
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .csv-input h3 {
+            margin-bottom: 10px;
+        }
+
+        .csv-input textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            padding: 10px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .csv-input textarea::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .show-list {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .show-item {
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: 2fr 80px auto auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .show-item input[type="text"] {
+            min-width: 0;
+        }
+
+        .show-item input[type="number"] {
+            width: 70px;
+        }
+
+        .delete-btn {
+            background: #FF4444 !important;
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            margin: 0 !important;
+        }
+
+        .add-show-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .show-item {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                text-align: left;
+            }
+            
+            .show-item input, .show-item button {
+                width: 100%;
+            }
+            
+            .current-show-indicator {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 10px;
+                max-width: none;
+            }
+        }
+
+        .empty-timeline {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255,255,255,0.7);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Principal -->
+        <div class="header">
+            <h1>🎭 CocoBongo Show Manager</h1>
+            <div class="current-time" id="currentTime">Cargando...</div>
+        </div>
+
+ 
+
+
+        <!-- Timeline (Lo más importante) -->
+        <div class="timeline">
+            <h3>🎪 Timeline de Shows</h3>
+            <div class="timeline-container" id="timeline">
+                <div class="empty-timeline">
+                    <p>🎭 Configura tus shows para ver el timeline</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Shows -->
+        <div class="show-list">
+            <div class="add-show-header">
+                <h3>📝 Lista de Shows:</h3>
+                <button onclick="addShow()">➕ Agregar Show</button>
+            </div>
+            <div id="showList">
+                <div class="empty-timeline">
+                    <p>No hay shows configurados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+        <!-- Controles Básicos -->
+        <div class="controls">
+            <div class="control-group">
+                <label>⏰ Hora de Inicio:</label>
+                <input type="time" id="startTime" value="22:00">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <button onclick="updateTimeline()">🔄 Actualizar Timeline</button>
+                <button onclick="moveClockToCurrentTime()">🕐 Auto Reloj</button>
+                <button onclick="clearClock()">❌ Quitar Reloj</button>
+            </div>
+        </div>
+
+        <!-- Import/Export -->
+        <div class="controls">
+            <button onclick="exportData()" style="flex: 1;">💾 Exportar Datos</button>
+            <button onclick="importData()" style="flex: 1;">📂 Importar Datos</button>
+        </div>
+
+        <!-- CSV Import -->
+        <div class="csv-input">
+            <h3>📊 Importar Shows desde CSV:</h3>
+            <textarea id="csvInput" placeholder="Nombre del Show, Duración (minutos)\nKamasutra, 8\nBarra, 5\nBluedown, 15\nQueen, 25"></textarea>
+            <button onclick="loadFromCSV()">📥 Cargar Shows</button>
+        </div>
+
+
+
+    <script>
+
+
+
+
+        // Variables globales
+        let shows = [
+            { name: "KAMASUTRA", duration: 8 },
+            { name: "BARRA", duration: 5 },
+            { name: "BLUEDOWN", duration: 15 },
+            { name: "SHOW TIME", duration: 10 },
+            { name: "ABBA", duration: 25 },
+            { name: "QUEEN", duration: 25 }
+        ];
+
+        let timeline = [];
+        let currentClockPosition = -1;
+        let autoClockMode = true;
+
+        // Función para actualizar el tiempo
+        function updateCurrentTime() {
+            try {
+                const now = new Date();
+                const timeElement = document.getElementById('currentTime');
+                
+                if (!timeElement) return;
+
+                // Formato simple y compatible
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+
+                let timeString;
+                try {
+                    // Intentar con español
+                    timeString = now.toLocaleString('es', options);
+                } catch (e) {
+                    // Fallback básico
+                    timeString = now.toLocaleString('default', options);
+                }
+
+                timeElement.textContent = timeString;
+            } catch (error) {
+                console.log('Error en updateCurrentTime:', error);
+                // Fallback manual
+                const now = new Date();
+                const timeElement = document.getElementById('currentTime');
+                if (timeElement) {
+                    timeElement.textContent = now.toLocaleString();
+                }
+            }
+        }
+
+
+
+        // Función para parsear tiempo
+        function parseTime(timeString) {
+            const [hours, minutes] = timeString.split(':').map(Number);
+            const date = new Date();
+            
+            // Si es menos de 12, asumir día siguiente
+            if (hours < 12) {
+                date.setDate(date.getDate() + 1);
+            }
+            
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+        }
+
+        // Función para formatear tiempo
+        function formatTime(date) {
+            try {
+                return date.toLocaleTimeString('es', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                // Fallback manual
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
+        }
+
+        // Actualizar timeline
+        function updateTimeline() {
+            try {
+                const startTimeInput = document.getElementById('startTime');
+                if (!startTimeInput) return;
+
+                const startTimeValue = startTimeInput.value || '22:00';
+                
+                timeline = [];
+                let currentTime = parseTime(startTimeValue);
+                
+                shows.forEach((show, index) => {
+                    const startTime = new Date(currentTime);
+                    const endTime = new Date(currentTime.getTime() + show.duration * 60000);
+                    
+                    timeline.push({
+                        ...show,
+                        startTime,
+                        endTime,
+                        index
+                    });
+                    
+                    currentTime = endTime; // Sin break time
+                });
+                
+                renderTimeline();
+                updateCurrentShow();
+            } catch (error) {
+                console.log('Error en updateTimeline:', error);
+            }
+        }
+
+        // Renderizar timeline
+        function renderTimeline() {
+            const timelineContainer = document.getElementById('timeline');
+            if (!timelineContainer) return;
+
+            timelineContainer.innerHTML = '';
+            
+            if (timeline.length === 0) {
+                timelineContainer.innerHTML = '<div class="empty-timeline"><p>🎭 Configura tus shows para ver el timeline</p></div>';
+                return;
+            }
+            
+            timeline.forEach((show, index) => {
+                const showBlock = document.createElement('div');
+                showBlock.className = 'show-block';
+                showBlock.onclick = () => toggleClock(index);
+                
+                showBlock.innerHTML = `
+                    <div class="show-name">${show.name}</div>
+                    <div class="show-time">${formatTime(show.startTime)} - ${formatTime(show.endTime)}</div>
+                    <div class="show-duration">${show.duration} min</div>
+                `;
+                
+                // Ancho proporcional
+                const width = Math.max(120, show.duration * 3);
+                showBlock.style.minWidth = width + 'px';
+                
+                // Clase de pasado
+                const now = new Date();
+                if (now > show.endTime) {
+                    showBlock.classList.add('past');
+                }
+                
+                timelineContainer.appendChild(showBlock);
+            });
+            
+            updateClockPosition();
+        }
+
+        // Control del reloj
+        function toggleClock(showIndex) {
+            if (currentClockPosition === showIndex) {
+                clearClock();
+            } else {
+                currentClockPosition = showIndex;
+                autoClockMode = false;
+                updateClockPosition();
+            }
+        }
+
+        function updateClockPosition() {
+            try {
+                // Limpiar relojes existentes
+                document.querySelectorAll('.clock-indicator').forEach(clock => clock.remove());
+                document.querySelectorAll('.show-block').forEach(block => block.classList.remove('current'));
+                
+                let clockPosition = currentClockPosition;
+                
+                if (autoClockMode) {
+                    clockPosition = calculateAutoClockPosition();
+                }
+                
+                if (clockPosition >= 0 && clockPosition < timeline.length) {
+                    const showBlocks = document.querySelectorAll('.show-block');
+                    const targetBlock = showBlocks[clockPosition];
+                    
+                    if (targetBlock) {
+                        targetBlock.classList.add('current');
+                        const clockIcon = document.createElement('div');
+                        clockIcon.className = 'clock-indicator';
+                        clockIcon.innerHTML = '🕒';
+                        targetBlock.appendChild(clockIcon);
+                        
+                        // Scroll para centrar el show actual
+                        targetBlock.scrollIntoView({
+                            behavior: 'smooth',
+                            inline: 'center',
+                            block: 'nearest'
+                        });
+                    }
+                }
+                updateCurrentShow();
+            } catch (error) {
+                console.log('Error en updateClockPosition:', error);
+            }
+        }
+
+        function clearClock() {
+            currentClockPosition = -1;
+            autoClockMode = false;
+            updateClockPosition();
+        }
+
+        function moveClockToCurrentTime() {
+            autoClockMode = true;
+            updateClockPosition();
+        }
+
+        function calculateAutoClockPosition() {
+            const now = new Date();
+            for (let i = 0; i < timeline.length; i++) {
+                const show = timeline[i];
+                if (now >= show.startTime && now <= show.endTime) {
+                    return i;
+                } else if (now < show.startTime) {
+                    // Si ya pasó el último show, o si es antes del primer show
+                    return i; // El próximo show
+                }
+            }
+            return -1; // No hay shows o ya pasaron todos
+        }
+
+        // Actualizar indicador de show actual/próximo
+        function updateCurrentShow() {
+            const indicator = document.getElementById('currentShowIndicator');
+            if (!indicator) return;
+
+            const now = new Date();
+            let currentOrNextShow = null;
+
+            for (let i = 0; i < timeline.length; i++) {
+                const show = timeline[i];
+                if (now >= show.startTime && now <= show.endTime) {
+                    currentOrNextShow = show;
+                    indicator.textContent = `▶️ Show Actual: ${show.name}`;
+                    indicator.style.background = 'rgba(76, 175, 80, 0.9)'; // Verde
+                    break;
+                } else if (now < show.startTime) {
+                    currentOrNextShow = show;
+                    indicator.textContent = `➡️ Próximo Show: ${show.name}`;
+                    indicator.style.background = 'rgba(255, 152, 0, 0.9)'; // Naranja
+                    break;
+                }
+            }
+
+            if (!currentOrNextShow) {
+                indicator.textContent = '✅ Shows Terminados';
+                indicator.style.background = 'rgba(33, 150, 243, 0.9)'; // Azul
+            }
+        }
+
+        // Funciones de Import/Export
+        function exportData() {
+            const data = {
+                shows: shows,
+                startTime: document.getElementById('startTime').value
+            };
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cocobongo_shows.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = event => {
+                        try {
+                            const importedData = JSON.parse(event.target.result);
+                            if (importedData.shows && importedData.startTime) {
+                                shows = importedData.shows;
+                                document.getElementById('startTime').value = importedData.startTime;
+                                renderShowList();
+                                updateTimeline();
+                                alert('Datos importados correctamente!');
+                            } else {
+                                alert('Formato de archivo JSON inválido.');
+                            }
+                        } catch (error) {
+                            alert('Error al leer el archivo JSON: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+
+
+
+        // Funciones de CSV
+        function loadFromCSV() {
+            const csvInput = document.getElementById('csvInput').value;
+            const lines = csvInput.split('\n').filter(line => line.trim() !== '');
+            
+            if (lines.length === 0) {
+                alert('Por favor, introduce datos en el formato CSV.');
+                return;
+            }
+
+            const newShows = [];
+            for (let i = 0; i < lines.length; i++) {
+                const parts = lines[i].split(',').map(part => part.trim());
+                if (parts.length === 2) {
+                    const name = parts[0];
+                    const duration = parseInt(parts[1]);
+                    if (name && !isNaN(duration) && duration > 0) {
+                        newShows.push({ name, duration });
+                    } else {
+                        alert(`Error en la línea ${i + 1}: Formato inválido. Cada línea debe ser 'Nombre del Show, Duración (minutos)'.`);
+                        return;
+                    }
+                } else {
+                    alert(`Error en la línea ${i + 1}: Formato inválido. Cada línea debe ser 'Nombre del Show, Duración (minutos)'.`);
+                    return;
+                }
+            }
+            shows = newShows;
+            renderShowList();
+            updateTimeline();
+            alert('Shows cargados desde CSV correctamente!');
+        }
+
+        // Funciones de gestión de shows
+        function renderShowList() {
+            const showListContainer = document.getElementById('showList');
+            if (!showListContainer) return;
+
+            showListContainer.innerHTML = '';
+
+            if (shows.length === 0) {
+                showListContainer.innerHTML = '<div class="empty-timeline"><p>No hay shows configurados</p></div>';
+                return;
+            }
+
+            shows.forEach((show, index) => {
+                const showItem = document.createElement('div');
+                showItem.className = 'show-item';
+                showItem.innerHTML = `
+                    <input type="text" value="${show.name}" onchange="updateShowName(${index}, this.value)">
+                    <input type="number" value="${show.duration}" onchange="updateShowDuration(${index}, this.value)">
+                    <button onclick="moveShowUp(${index})">⬆️</button>
+                    <button onclick="moveShowDown(${index})">⬇️</button>
+                    <button class="delete-btn" onclick="deleteShow(${index})">🗑️</button>
+                `;
+                showListContainer.appendChild(showItem);
+            });
+        }
+
+        function addShow() {
+            shows.push({ name: "Nuevo Show", duration: 10 });
+            renderShowList();
+            updateTimeline();
+        }
+
+        function updateShowName(index, newName) {
+            shows[index].name = newName;
+            updateTimeline();
+        }
+
+        function updateShowDuration(index, newDuration) {
+            const duration = parseInt(newDuration);
+            if (!isNaN(duration) && duration > 0) {
+                shows[index].duration = duration;
+                updateTimeline();
+            } else {
+                alert('La duración debe ser un número positivo.');
+                // Revertir el valor si es inválido
+                renderShowList(); 
+            }
+        }
+
+        function deleteShow(index) {
+            shows.splice(index, 1);
+            renderShowList();
+            updateTimeline();
+        }
+
+        function moveShowUp(index) {
+            if (index > 0) {
+                [shows[index], shows[index - 1]] = [shows[index - 1], shows[index]];
+                renderShowList();
+                updateTimeline();
+            }
+        }
+
+        function moveShowDown(index) {
+            if (index < shows.length - 1) {
+                [shows[index], shows[index + 1]] = [shows[index + 1], shows[index]];
+                renderShowList();
+                updateTimeline();
+            }
+        }
+
+
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            // Cargar datos guardados primero
+            const savedShows = localStorage.getItem('cocobongoShows');
+            const savedStartTime = localStorage.getItem('cocobongoStartTime');
+
+            if (savedShows) {
+                try {
+                    shows = JSON.parse(savedShows);
+                } catch (e) {
+                    console.log('Error al cargar shows guardados:', e);
+                }
+            }
+            if (savedStartTime) {
+                document.getElementById('startTime').value = savedStartTime;
+            }
+
+            // Inicializar la aplicación
+            renderShowList();
+            updateTimeline();
+            updateCurrentTime();
+            
+            // Configurar intervalos
+            setInterval(updateCurrentTime, 1000); // Actualizar cada segundo
+            setInterval(() => {
+                if (autoClockMode) {
+                    updateClockPosition();
+                }
+            }, 5000); // Actualizar posición del reloj cada 5 segundos
+        });
+
+        // Guardar datos en localStorage
+        window.addEventListener('beforeunload', () => {
+            try {
+                localStorage.setItem('cocobongoShows', JSON.stringify(shows));
+                localStorage.setItem('cocobongoStartTime', document.getElementById('startTime').value);
+            } catch (e) {
+                console.log('Error al guardar datos:', e);
+            }
+        });
+
+    </script>
+</body>
+</html>
